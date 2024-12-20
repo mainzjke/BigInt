@@ -9,6 +9,7 @@ public:
   BigInt(const char *val);
   ~BigInt();
 
+  char *value;
   BigInt operator+(const BigInt &other);
   BigInt &operator+=(const BigInt &other);
 
@@ -32,6 +33,10 @@ public:
   bool operator>=(const BigInt &other) const;
 
 private:
-  char *value;
+  void resize();
+
+private:
   unsigned int size;
+  unsigned int capacity;
+  bool sign;
 };
