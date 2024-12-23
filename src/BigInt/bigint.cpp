@@ -51,12 +51,14 @@ char *makeNegative(const char *value, unsigned int size) {
 BigInt::BigInt() {
   m_capacity = m_size = 1;
   m_value = new char[m_capacity];
+  m_sign = true;
   m_value[0] = 0;
 }
 
 BigInt::BigInt(const BigInt &other) {
   m_capacity = other.m_capacity;
   m_size = other.m_size;
+  m_sign = other.m_sign;
   m_value = new char[m_capacity];
   std::memcpy(m_value, other.m_value, m_capacity);
 }
@@ -123,13 +125,25 @@ BigInt BigInt::operator+(const BigInt &other) {
   if (carry > 0) {
     result[ms] = carry & 0xFF;
   }
-  ::printBits(result, ms + 1);
   return BigInt(result, ms + 1, true);
 }
 
 BigInt &BigInt::operator+=(const BigInt &other) {}
 
-BigInt BigInt::operator-(const BigInt &other) {}
+BigInt BigInt::operator-(const BigInt &other) {
+  //! TODO negative - the greater of the two numbers
+  auto *negative = makeNegative(other.m_value, m_size);
+  auto res = *this + BigInt(negative, m_size, false);
+
+  auto ms = std::max(m_size, other.m_size);
+  //! Если бит перелетел на другой разряд
+  if (res.m_size > ms) {
+    for (unsigned int i = res.m_size; i > ms; --i) {
+      res.m_value[res.m_size - 1] = 0x0;
+    }
+  }
+  return res;
+}
 
 BigInt BigInt::operator-=(const BigInt &other) {}
 
