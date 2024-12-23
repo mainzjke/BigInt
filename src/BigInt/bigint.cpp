@@ -33,69 +33,82 @@ void invertBits(char *value, unsigned int size) {
 } // namespace
 
 BigInt::BigInt() {
-  capacity = size = 1;
-  value = new char[capacity];
-  value[0] = 0;
+  m_capacity = m_size = 1;
+  m_value = new char[m_capacity];
+  m_value[0] = 0;
 }
 
-BigInt::BigInt(const BigInt &other) {}
+BigInt::BigInt(const BigInt &other) {
+  m_capacity = other.m_capacity;
+  m_size = other.m_size;
+  m_value = new char[m_capacity];
+  std::memcpy(m_value, other.m_value, m_capacity);
+}
 
-BigInt::BigInt(BigInt &&other) {}
+BigInt::BigInt(BigInt &&other) {
+  m_capacity = other.m_capacity;
+  m_size = other.m_size;
+  m_value = std::move(other.m_value);
+  other.m_value = nullptr;
+  other.m_capacity = 0;
+  other.m_size = 0;
+  other.m_sign = false;
+}
 
-BigInt::BigInt(int val) {
-  capacity = size = sizeof(int);
-  value = new char[capacity];
-  sign = (val > 0) ? true : false;
+BigInt::BigInt(int value) {
+  m_capacity = m_size = sizeof(int);
+  m_value = new char[m_capacity];
+  m_sign = (value > 0) ? true : false;
 
   //! берем число по модулю
-  val = std::abs(val);
+  value = std::abs(value);
 
-  std::memcpy(value, &val, capacity);
-  ::printBits(value, capacity);
+  std::memcpy(m_value, &value, m_capacity);
+  ::printBits(m_value, m_capacity);
   resize();
 }
 
-BigInt::BigInt(const char *val) {
-  if (!val || std::strlen(value) == 0) {
+BigInt::BigInt(const char *value) {
+  if (!value || std::strlen(value) == 0) {
     throw std::invalid_argument("empty string");
   }
   //! TODO
 }
 
-BigInt::~BigInt() { delete[] value; }
+BigInt::BigInt(char *value, unsigned int capacity, bool sign) {
+  m_value = value;
+  m_capacity = m_size = capacity;
+  m_sign = sign;
+  resize();
+}
+
+BigInt::~BigInt() { delete[] m_value; }
 
 void BigInt::resize() {
-  for (int i = size - 1; i >= 0; --i) {
-    if (static_cast<int>(value[i]) == 0x0) {
-      --size;
-    } else
-      break;
+  while (m_size > 1 && m_value[m_size - 1] == 0x0) {
+    --m_size;
   }
 }
 
 BigInt BigInt::operator+(const BigInt &other) {
   //! max size
-  auto ms = std::max(size, other.size);
+  auto ms = std::max(m_size, other.m_size);
   char *result = new char[ms + 1];
   int carry = 0;
   for (unsigned i = 0; i < ms; ++i) {
-    int byte1 = (i < size) ? static_cast<unsigned char>(value[i]) : 0;
+    int byte1 = (i < m_size) ? static_cast<unsigned char>(m_value[i]) : 0;
     int byte2 =
-        (i < other.size) ? static_cast<unsigned char>(other.value[i]) : 0;
+        (i < other.m_size) ? static_cast<unsigned char>(other.m_value[i]) : 0;
     auto sum = byte1 + byte2 + carry;
     std::memcpy(&result[i], &sum, 1);
     carry = (sum >> 8) & 0x1;
   }
-  BigInt res;
+
   if (carry > 0) {
     std::memcpy(&result[ms], &carry, 1);
   }
   ::printBits(result, ms + 1);
-  res.sign = true;
-  res.value = result;
-  res.capacity = res.size = ms + 1;
-  res.resize();
-  return res;
+  return BigInt(result, ms + 1, true);
 }
 
 BigInt &BigInt::operator+=(const BigInt &other) {}
@@ -103,6 +116,12 @@ BigInt &BigInt::operator+=(const BigInt &other) {}
 BigInt BigInt::operator-(const BigInt &other) {}
 
 BigInt BigInt::operator-=(const BigInt &other) {}
+
+BigInt BigInt::operator-() const {
+  BigInt result(*this);
+  result.m_sign = !m_sign;
+  return result;
+}
 
 BigInt BigInt::operator*(const BigInt &other) {}
 
@@ -112,13 +131,33 @@ BigInt BigInt::operator/(const BigInt &other) {}
 
 BigInt BigInt::operator/=(const BigInt &other) {}
 
-BigInt &BigInt::operator=(const BigInt &other) {}
+BigInt &BigInt::operator=(const BigInt &other) {
+  if (*this == other)
+    return *this;
+  m_capacity = other.m_capacity;
+  m_size = other.m_size;
+  m_sign = other.m_sign;
+  m_value = new char[m_capacity];
+  std::memcpy(m_value, other.m_value, m_capacity);
+}
+
+BigInt &BigInt::operator=(BigInt &&other) {
+  m_capacity = other.m_capacity;
+  m_size = other.m_size;
+  m_sign = other.m_sign;
+  m_value = other.m_value;
+
+  other.m_value = nullptr;
+  other.m_size = 0;
+  other.m_capacity = 0;
+  other.m_sign = false;
+}
 
 bool BigInt::operator==(const BigInt &other) const {
-  if (size != other.size || sign != other.sign)
+  if (m_size != other.m_size || m_sign != other.m_sign)
     return false;
-  for (unsigned int i = 0; i < size; ++i) {
-    if (value[i] != other.value[i])
+  for (unsigned int i = 0; i < m_size; ++i) {
+    if (m_value[i] != other.m_value[i])
       return false;
   }
   return true;
@@ -127,8 +166,8 @@ bool BigInt::operator==(const BigInt &other) const {
 bool BigInt::operator!=(const BigInt &other) const { return !(*this == other); }
 
 bool BigInt::operator<(const BigInt &other) const {
-  if (size != other.size)
-    return size < other.size;
+  if (m_size != other.m_size)
+    return m_size < other.m_size;
   //! TODO
 }
 
