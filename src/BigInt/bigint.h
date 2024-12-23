@@ -8,6 +8,7 @@ public:
   BigInt(int value);
   BigInt(const char *value);
   ~BigInt();
+
   BigInt operator+(const BigInt &other);
   BigInt &operator+=(const BigInt &other);
 

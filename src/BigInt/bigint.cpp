@@ -24,10 +24,26 @@ void printBits(const char *value, unsigned int size) {
   std::cout << std::endl;
 }
 
-void invertBits(char *value, unsigned int size) {
+char *invertBits(const char *value, unsigned int size) {
+  char *r = new char[size];
   for (int i = size - 1; i >= 0; --i) {
-    value[i] = ~value[i];
+    r[i] = ~value[i];
   }
+  return r;
+}
+
+char *makeNegative(const char *value, unsigned int size) {
+  char *r = invertBits(value, size);
+  int carry = 1;
+  for (unsigned i = 0; i < size; ++i) {
+    int byte = static_cast<unsigned char>(r[i]);
+    auto sum = byte + carry;
+    r[i] = sum & 0xFF;
+    carry = (sum >> 8) & 0x1;
+    if (carry == 0x0)
+      break;
+  }
+  return r;
 }
 
 } // namespace
@@ -100,12 +116,12 @@ BigInt BigInt::operator+(const BigInt &other) {
     int byte2 =
         (i < other.m_size) ? static_cast<unsigned char>(other.m_value[i]) : 0;
     auto sum = byte1 + byte2 + carry;
-    std::memcpy(&result[i], &sum, 1);
+    result[i] = sum & 0xFF;
     carry = (sum >> 8) & 0x1;
   }
 
   if (carry > 0) {
-    std::memcpy(&result[ms], &carry, 1);
+    result[ms] = carry & 0xFF;
   }
   ::printBits(result, ms + 1);
   return BigInt(result, ms + 1, true);
